@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+
+# Editors
+.idea/
+.vscode/
+.DS_Store
+
+# Local runtime data (logs, metrics, ground truth)
+var/
+
+# Secrets
+.env
+
+# Scratch files from the idea-selection run
+.arena/
