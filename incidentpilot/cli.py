@@ -1,4 +1,4 @@
-"""Command line: ``incidentpilot up | traffic | chaos | logs``."""
+"""Command line: ``incidentpilot up | traffic | chaos | logs | mcp | approve``."""
 
 from __future__ import annotations
 
@@ -214,6 +214,23 @@ def cmd_logs(args: argparse.Namespace) -> int:
     return 0
 
 
+# -- mcp / approve ------------------------------------------------------------
+
+
+def cmd_mcp(args: argparse.Namespace) -> int:
+    from incidentpilot.mcp_server import main as serve
+
+    serve(http=args.http)
+    return 0
+
+
+def cmd_approve(args: argparse.Namespace) -> int:
+    from incidentpilot import approval
+
+    print(approval.mint(args.service, args.to_revision))
+    return 0
+
+
 # -- entry point --------------------------------------------------------------
 
 
@@ -249,6 +266,15 @@ def build_parser() -> argparse.ArgumentParser:
     logs.add_argument("--severity", choices=SEVERITY_ORDER, default="INFO", help="minimum severity")
     logs.add_argument("-f", "--follow", action="store_true")
     logs.set_defaults(func=cmd_logs)
+
+    mcp = sub.add_parser("mcp", help="run the IncidentPilot MCP server (stdio by default)")
+    mcp.add_argument("--http", action="store_true", help="serve streamable HTTP on :8000 instead")
+    mcp.set_defaults(func=cmd_mcp)
+
+    approve = sub.add_parser("approve", help="mint a 10-minute approval token for one rollback")
+    approve.add_argument("service", choices=SERVICES)
+    approve.add_argument("to_revision")
+    approve.set_defaults(func=cmd_approve)
     return parser
 
 

@@ -9,10 +9,12 @@ CLI: `up`, `traffic`, `chaos`, `logs`. Test suite.
 
 **Done when:** one command starts the shop, a fault can be turned on, and errors show up in the logs.
 
-## Phase 2: MCP servers
+## Phase 2: MCP server ✅
+Built as one server (split per IAM role in Phase 6 if needed). Keyword runbook search, regex PII redaction.
+
 - `observability`: `query_logs`, `get_metrics`, `list_revisions`, `top_errors` (local files now, Cloud Logging later)
 - `runbooks`: runbooks as MCP resources, plus a `search_runbooks` tool (RAG)
-- `remediation`: `rollback` and `scale`, refused without a signed approval token
+- `remediation`: `rollback`, refused without a signed approval token (`scale` skipped: no fault needs it)
 - PII redaction inside the observability server
 - Connect the servers to Claude Code
 

@@ -9,7 +9,7 @@ real log entries. Any fix, such as a rollback, waits for a human to approve it.
 To measure how well it works, it investigates a demo shop that we break on purpose, so the true root
 cause of every incident is known.
 
-> **Status:** Phase 1 of 6 is done (the demo shop and the chaos tooling). See [docs/ROADMAP.md](docs/ROADMAP.md).
+> **Status:** Phases 1–2 of 6 are done (the demo shop, chaos tooling and the MCP server). See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 
@@ -85,6 +85,40 @@ Tune a fault with `--param`, for example `--param latency_s=5` for `slow_depende
 
 ---
 
+## The MCP server
+
+One server gives any MCP client (the agent in Phase 3, or Claude Code) eyes on ShopDemo and one
+gated pair of hands:
+
+| Tool | Kind | What it returns |
+|---|---|---|
+| `top_errors` | read | ERROR/CRITICAL messages grouped by shape, with counts, revisions and an example |
+| `query_logs` | read | log entries filtered by service, severity, time window and text, each with a citable `id` |
+| `get_metrics` | read | per-service metric points (error rate, p95, memory, restarts, DB pool) |
+| `list_revisions` | read | deploy history: commit message, image, env var changes, which revision serves |
+| `search_runbooks` | read | the best-matching runbooks from `runbooks/` (also exposed as `runbook://<name>` resources) |
+| `rollback` | **write** | shifts traffic to an earlier revision, **only with a human approval token** |
+
+Safety built in:
+- **PII redaction:** emails and card numbers in log text are masked before they leave the server.
+- **Approval tokens:** `rollback` needs an HMAC-signed token for that exact service and revision. It
+  expires after 10 minutes and works once. Mint one with `incidentpilot approve orders orders-00001`.
+- **Log text is labeled untrusted** in the server instructions and tool descriptions (full
+  prompt-injection defenses come in Phase 5).
+
+Run it:
+
+```bash
+incidentpilot mcp          # stdio, for Claude Code and the agent
+incidentpilot mcp --http   # streamable HTTP on :8000
+```
+
+**Use it from Claude Code:** the repo's `.mcp.json` registers the server. Run `claude` in this
+folder, approve the `incidentpilot` server when asked, break the shop, then ask
+*"why is orders failing?"*.
+
+---
+
 ## Repo layout
 
 ```
@@ -93,6 +127,9 @@ incidentpilot/
   chaos.py             fault injection and ground-truth recording
   traffic.py           traffic generator
   cli.py               `incidentpilot` command
+  mcp_server.py        MCP tools: logs, metrics, revisions, runbooks, gated rollback
+  approval.py          signed, expiring, single-use approval tokens
+  redact.py            PII redaction
   shopdemo/
     base.py            revisions, admin API, telemetry middleware, upstream calls
     frontend.py        /products, /checkout
@@ -102,6 +139,7 @@ incidentpilot/
     serializers.py     the buggy refactor behind bad_deploy
     telemetry.py       JSON logger and metrics
     inprocess.py       all three services in one process (tests, evals)
+runbooks/              on-call runbooks the agent can search
 tests/                 pytest suite
 docs/ROADMAP.md        the six build phases
 ```
