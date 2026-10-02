@@ -1,4 +1,4 @@
-"""Command line: ``incidentpilot up | traffic | chaos | logs | mcp | approve | investigate``."""
+"""Command line: ``incidentpilot up | traffic | chaos | logs | mcp | approve | investigate | eval``."""
 
 from __future__ import annotations
 
@@ -260,6 +260,38 @@ def cmd_investigate(args: argparse.Namespace) -> int:
     return 0
 
 
+# -- eval ------------------------------------------------------------------------
+
+
+def cmd_eval(args: argparse.Namespace) -> int:
+    from incidentpilot import evals
+
+    dataset = Path(args.dataset) if args.dataset else evals.default_dataset_dir()
+    if args.eval_cmd == "generate":
+        def progress(i: int, n: int, case: dict) -> None:
+            print(f"  [{i}/{n}] {case['case_id']}", flush=True)
+
+        print(f"Recording {args.n} incidents into {dataset}")
+        asyncio.run(evals.generate_dataset(dataset, args.n, seed=args.seed, on_case=progress))
+        return 0
+
+    def progress(row: dict) -> None:
+        mark = "ERR" if row["error"] else ("ok " if row["correct"] else "x  ")
+        print(f"  {mark} {row['case_id']:<32} {row['tool_calls']:>2} calls {row['latency_s']:>6}s", flush=True)
+
+    print(f"Evaluating {args.model} on {dataset}")
+    summary, rows = asyncio.run(evals.run_eval(
+        dataset, args.model, concurrency=args.concurrency, limit=args.limit, judge_model=args.judge, on_result=progress,
+    ))
+    path = evals.write_results(summary, rows)
+    print("\n" + evals.results_markdown([summary]))
+    print(f"Saved {path} and evals/RESULTS.md")
+    if args.min_accuracy is not None and summary["accuracy"] < args.min_accuracy:
+        print(f"FAIL: accuracy {summary['accuracy']:.0%} is below --min-accuracy {args.min_accuracy:.0%}", file=sys.stderr)
+        return 1
+    return 0
+
+
 # -- entry point --------------------------------------------------------------
 
 
@@ -310,6 +342,21 @@ def build_parser() -> argparse.ArgumentParser:
                      help="'baseline' (offline) or a LangChain provider:model string")
     inv.add_argument("--alert", default="High 5xx error rate on frontend POST /checkout")
     inv.set_defaults(func=cmd_investigate)
+
+    ev = sub.add_parser("eval", help="record incidents and score the agent on them")
+    ev_sub = ev.add_subparsers(dest="eval_cmd", required=True)
+    gen = ev_sub.add_parser("generate", help="record a dataset of incidents with known root causes")
+    gen.add_argument("-n", type=int, default=150)
+    gen.add_argument("--seed", type=int, default=0)
+    gen.add_argument("--dataset", help="output folder (default var/evals/dataset)")
+    run = ev_sub.add_parser("run", help="replay the dataset to the agent and score it")
+    run.add_argument("--model", default="baseline")
+    run.add_argument("--limit", type=int, help="only the first N cases")
+    run.add_argument("--concurrency", type=int, default=4)
+    run.add_argument("--judge", help="model that grades each summary 1-5 (LLM-as-judge)")
+    run.add_argument("--min-accuracy", type=float, help="exit 1 below this accuracy (CI gate)")
+    run.add_argument("--dataset", help="dataset folder (default var/evals/dataset)")
+    ev.set_defaults(func=cmd_eval)
     return parser
 
 

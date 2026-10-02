@@ -25,6 +25,8 @@ from langgraph.prebuilt import ToolNode
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 
+from incidentpilot.config import REPO_ROOT
+
 DEFAULT_MODEL = os.environ.get("INCIDENTPILOT_MODEL", "google_vertexai:gemini-2.5-flash")
 READ_ONLY_TOOLS = {"query_logs", "top_errors", "get_metrics", "list_revisions", "search_runbooks"}
 MAX_TOOL_CALLS = 15
@@ -209,5 +211,5 @@ def mcp_server_params() -> dict[str, Any]:
         "transport": "stdio",
         "command": sys.executable,
         "args": ["-m", "incidentpilot.mcp_server"],
-        "env": dict(os.environ),
+        "env": {**os.environ, "PYTHONPATH": str(REPO_ROOT)},
     }

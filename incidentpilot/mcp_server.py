@@ -8,6 +8,7 @@ Run over HTTP (Cloud Run later):           incidentpilot mcp --http
 from __future__ import annotations
 
 import json
+import os
 import re
 from collections import Counter
 from datetime import datetime, timedelta, timezone
@@ -40,7 +41,10 @@ mcp = FastMCP(
 
 
 def _since(minutes: float) -> str:
-    cutoff = datetime.now(timezone.utc) - timedelta(minutes=minutes)
+    # Replayed eval cases freeze "now" at the moment the case was recorded.
+    frozen = os.environ.get("INCIDENTPILOT_NOW")
+    now = datetime.fromisoformat(frozen.replace("Z", "+00:00")) if frozen else datetime.now(timezone.utc)
+    cutoff = now - timedelta(minutes=minutes)
     return cutoff.isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
@@ -163,6 +167,9 @@ async def list_revisions(service: str) -> dict[str, Any]:
     """Deploy history for one service: every revision with creation time, image, commit
     message and env var changes, plus which revision is serving now."""
     _check_service(service)
+    recorded = Settings.from_env().var_dir / "revisions.json"
+    if recorded.exists():  # replaying an eval case
+        return json.loads(recorded.read_text())[service]
     return await _admin(service, "GET", "/admin/revisions")
 
 

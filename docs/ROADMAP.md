@@ -28,8 +28,10 @@ In-memory checkpointer (Postgres in Phase 6), LangSmith tracing via env vars, to
 
 **Done when:** the agent names the right service and cites real log lines.
 
-## Phase 4: Evals
-Fixture recorder, replay MCP server, about 150 incidents. Metrics: root-cause accuracy, evidence
+## Phase 4: Evals ✅
+Built lean: a case folder *is* the recording, replayed by the normal MCP server with a frozen clock (no separate recorder or replay server). Decoy deploys added to make cases harder. `--min-accuracy` gives the CI gate.
+
+150 recorded incidents. Metrics: root-cause accuracy, evidence
 grounding, hallucinated citations, cost, steps and fix correctness. LLM-as-judge, checked against
 human grades. Model and prompt experiments, kept in a results table.
 

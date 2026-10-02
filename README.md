@@ -9,7 +9,7 @@ real log entries. Any fix, such as a rollback, waits for a human to approve it.
 To measure how well it works, it investigates a demo shop that we break on purpose, so the true root
 cause of every incident is known.
 
-> **Status:** Phases 1–3 of 6 are done (the demo shop, the MCP server and the LangGraph agent). See [docs/ROADMAP.md](docs/ROADMAP.md).
+> **Status:** Phases 1–4 of 6 are done (the demo shop, the MCP server, the LangGraph agent and the evals). See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 
@@ -58,6 +58,8 @@ Requires Python 3.11+.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
+# If `incidentpilot` says "No module named incidentpilot" on macOS, run `chflags -R nohidden .venv`
+# or use `python -m incidentpilot.cli` instead (Python skips .pth files that macOS marks hidden).
 pip install -e ".[dev]"
 make test
 ```
@@ -153,6 +155,37 @@ token count in LangSmith. No code changes needed.
 
 ---
 
+## Evals
+
+Results: **[evals/RESULTS.md](evals/RESULTS.md)**
+
+**Dataset.** `incidentpilot eval generate -n 150` records 150 incidents, 30 per fault. Each case is a
+folder with the broken shop's logs, metrics and deploy history, plus the ground truth. Cases vary:
+random fault strength, red-herring noise in half of them, and an **unrelated decoy deploy** in about a
+third (including a decoy deploy on payments during `slow_dependency`, which tempts a wrong rollback).
+
+**Replay.** Each case is replayed through the same MCP server, pointed at the case folder with the
+clock frozen. Tool results are identical on every run and a case costs only LLM tokens.
+
+**Scoring.** A case is **correct** only when the service, the fault category *and* the action (the
+exact rollback revision, or no action) are all right. Also measured: harmful rollbacks (one a human
+might approve that wouldn't fix anything), made-up citations, accuracy under noise and decoy deploys,
+tool calls, tokens, cost and latency.
+
+**LLM-as-judge.** `--judge <model>` grades each summary 1–5 against the ground truth. Put your own
+grades in `evals/human_grades.jsonl` (`{"case_id": ..., "model": ..., "score": 1-5}`) and the
+results report how often the judge agrees with you.
+
+```bash
+incidentpilot eval generate -n 150                                   # record the dataset (~5 min)
+incidentpilot eval run --model baseline                              # offline
+incidentpilot eval run --model google_vertexai:gemini-2.5-flash \
+    --judge google_vertexai:gemini-2.5-pro                           # Gemini, graded by Gemini Pro
+incidentpilot eval run --model baseline --min-accuracy 0.9           # exit 1 below 90% (CI gate)
+```
+
+---
+
 ## Repo layout
 
 ```
@@ -165,6 +198,7 @@ incidentpilot/
   approval.py          signed, expiring, single-use approval tokens
   agent.py             LangGraph agent, RCAReport schema, citation check
   baseline.py          offline rule-based model
+  evals.py             dataset recording, replay, scoring, LLM-as-judge
   redact.py            PII redaction
   shopdemo/
     base.py            revisions, admin API, telemetry middleware, upstream calls
@@ -176,6 +210,7 @@ incidentpilot/
     telemetry.py       JSON logger and metrics
     inprocess.py       all three services in one process (tests, evals)
 runbooks/              on-call runbooks the agent can search
+evals/RESULTS.md       latest eval results per model
 tests/                 pytest suite
 docs/ROADMAP.md        the six build phases
 ```

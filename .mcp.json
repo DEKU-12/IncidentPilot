@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "incidentpilot": {
-      "command": ".venv/bin/incidentpilot",
-      "args": ["mcp"]
+      "command": ".venv/bin/python",
+      "args": ["-m", "incidentpilot.mcp_server"]
     }
   }
 }

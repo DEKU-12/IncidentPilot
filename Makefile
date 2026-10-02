@@ -1,7 +1,7 @@
 PY := .venv/bin/python
-IP := .venv/bin/incidentpilot
+IP := $(PY) -m incidentpilot.cli
 
-.PHONY: install test up traffic logs status clear
+.PHONY: install test up traffic logs status clear eval-data eval
 
 install:  ## install the package and dev tools into .venv
 	$(PY) -m pip install -e ".[dev]"
@@ -23,3 +23,10 @@ status:
 
 clear:
 	$(IP) chaos clear
+
+eval-data:  ## record 150 incidents with known root causes
+	$(IP) eval generate -n 150
+
+eval:  ## score the agent (MODEL=google_vertexai:gemini-2.5-flash to use Gemini)
+	@test -d var/evals/dataset || $(IP) eval generate -n 150
+	$(IP) eval run --model $(or $(MODEL),baseline)

@@ -33,3 +33,5 @@ include = ["incidentpilot*"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+# Import from the repo, not the editable-install .pth (macOS can hide .pth files and Python skips them).
+pythonpath = ["."]
