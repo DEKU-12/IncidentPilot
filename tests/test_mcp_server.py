@@ -7,20 +7,13 @@ from conftest import CHECKOUT
 from mcp.shared.memory import create_connected_server_and_client_session
 
 from incidentpilot import approval, mcp_server
-from incidentpilot.config import SERVICES
 from incidentpilot.redact import redact
 from incidentpilot.shopdemo.faults import FaultKind
 
 
 @pytest.fixture
-async def broken_shop(shop, client, monkeypatch):
+async def broken_shop(shop, client, mcp_env):
     """Orders is on a bad revision and has served some failing bulk orders."""
-    monkeypatch.setenv("INCIDENTPILOT_VAR_DIR", str(shop.settings.var_dir))
-    monkeypatch.setenv("SHOPDEMO_ADMIN_TOKEN", shop.settings.admin_token)
-    for name in SERVICES:
-        monkeypatch.setenv(f"{name.upper()}_URL", f"http://{name}")
-    monkeypatch.setattr(mcp_server, "TRANSPORT", shop.transport)
-
     shop.contexts["orders"].inject(FaultKind.BAD_DEPLOY, {})
     for qty in (1, 2, 2, 3):
         await client.post("/checkout", json={**CHECKOUT, "quantity": qty})

@@ -1,4 +1,4 @@
-"""Command line: ``incidentpilot up | traffic | chaos | logs | mcp | approve``."""
+"""Command line: ``incidentpilot up | traffic | chaos | logs | mcp | approve | investigate``."""
 
 from __future__ import annotations
 
@@ -231,6 +231,35 @@ def cmd_approve(args: argparse.Namespace) -> int:
     return 0
 
 
+# -- investigate ---------------------------------------------------------------
+
+
+def cmd_investigate(args: argparse.Namespace) -> int:
+    from langchain_mcp_adapters.client import MultiServerMCPClient
+    from langchain_mcp_adapters.tools import load_mcp_tools
+
+    from incidentpilot.agent import investigate_alert, make_model, mcp_server_params
+
+    async def run() -> dict:
+        client = MultiServerMCPClient({"incidentpilot": mcp_server_params()})
+        async with client.session("incidentpilot") as session:
+            tools = await load_mcp_tools(session)
+            return await investigate_alert(args.alert, make_model(args.model), tools)
+
+    print(f"Investigating with {args.model}: {args.alert}\n")
+    state = asyncio.run(run())
+    for i, (name, call_args) in enumerate(state["tool_calls"], 1):
+        print(f"  step {i:>2}: {name}({json.dumps(call_args)})")
+    report = state["report"]
+    print("\nRoot-cause report:")
+    print(report.model_dump_json(indent=2) if report else "  (no valid report)")
+    if state["problems"]:
+        print("\nVerification problems:", *state["problems"], sep="\n  - ")
+    u = state["usage"]
+    print(f"\nTokens: {u['input_tokens']} in / {u['output_tokens']} out, {len(state['tool_calls'])} tool calls")
+    return 0
+
+
 # -- entry point --------------------------------------------------------------
 
 
@@ -275,6 +304,12 @@ def build_parser() -> argparse.ArgumentParser:
     approve.add_argument("service", choices=SERVICES)
     approve.add_argument("to_revision")
     approve.set_defaults(func=cmd_approve)
+
+    inv = sub.add_parser("investigate", help="run the agent on the current incident")
+    inv.add_argument("--model", default=os.environ.get("INCIDENTPILOT_MODEL", "google_vertexai:gemini-2.5-flash"),
+                     help="'baseline' (offline) or a LangChain provider:model string")
+    inv.add_argument("--alert", default="High 5xx error rate on frontend POST /checkout")
+    inv.set_defaults(func=cmd_investigate)
     return parser
 
 

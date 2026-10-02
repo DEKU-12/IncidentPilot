@@ -57,14 +57,16 @@ def create_app(
             latency = ctx.params(FaultKind.SLOW_DEPENDENCY)["latency_s"] * ctx.rng.uniform(0.9, 1.1)
         else:
             latency = ctx.rng.uniform(0.01, 0.04)
-        await asyncio.sleep(latency)  # POST {fraud_url}/v1/score
+        # POST {fraud_url}/v1/score, warning as soon as the SLO is breached (even if the caller gives up).
+        await asyncio.sleep(min(latency, FRAUD_SLO_S))
         if latency > FRAUD_SLO_S:
             ctx.logger.warning(
-                f"Fraud-check provider {fraud_host} responded in {latency * 1000:.0f}ms "
-                f"(SLO {FRAUD_SLO_S * 1000:.0f}ms)",
+                f"Fraud-check provider {fraud_host} has not responded after {FRAUD_SLO_S * 1000:.0f}ms "
+                "(SLO breached), still waiting",
                 trace_id=trace_id,
                 dependency=fraud_host,
             )
+            await asyncio.sleep(latency - FRAUD_SLO_S)
 
         if ctx.rng.random() < DECLINE_RATE:
             ctx.logger.warning(

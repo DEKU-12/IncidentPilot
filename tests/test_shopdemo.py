@@ -86,7 +86,7 @@ async def test_connection_exhaustion_times_out_under_concurrency(shop, client):
 
 async def test_slow_dependency_times_out_in_orders_and_rollback_does_not_help(shop, client):
     payments = shop.contexts["payments"]
-    payments.inject(FaultKind.SLOW_DEPENDENCY, {"latency_s": 0.5})
+    payments.inject(FaultKind.SLOW_DEPENDENCY, {"latency_s": 0.8})
     assert payments.revision.name == "payments-00001", "no deploy is involved"
 
     assert (await checkout(client)).status_code == 502

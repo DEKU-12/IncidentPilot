@@ -9,7 +9,7 @@ real log entries. Any fix, such as a rollback, waits for a human to approve it.
 To measure how well it works, it investigates a demo shop that we break on purpose, so the true root
 cause of every incident is known.
 
-> **Status:** Phases 1–2 of 6 are done (the demo shop, chaos tooling and the MCP server). See [docs/ROADMAP.md](docs/ROADMAP.md).
+> **Status:** Phases 1–3 of 6 are done (the demo shop, the MCP server and the LangGraph agent). See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 
@@ -119,6 +119,40 @@ folder, approve the `incidentpilot` server when asked, break the shop, then ask
 
 ---
 
+## The agent
+
+A LangGraph loop ([incidentpilot/agent.py](incidentpilot/agent.py)) that uses the MCP tools through
+`langchain-mcp-adapters`:
+
+```
+investigate ⇄ tools  →  report  →  verify ─┐
+     ▲                                     │ a cited log ID or revision isn't real
+     └─────────────────────────────────────┘ (2 retries, then confidence capped at 0.3)
+```
+
+- **Output:** a Pydantic `RCAReport`: root-cause service, fault category, summary, cited log IDs,
+  confidence, proposed action and rollback target.
+- **Verify** is plain code, not another LLM call: every cited `id` must appear in a tool result,
+  and a proposed rollback must target a real earlier revision.
+- **Read-only:** the agent only gets the read tools. It proposes rollbacks; it can't run them.
+- **Budget:** at most 15 tool calls, then it must report.
+- **Models:** any LangChain `provider:model` string, plus `baseline`, a rule-based model that runs
+  offline and is the bar the LLM has to beat in the evals.
+
+```bash
+incidentpilot investigate --model baseline                           # offline
+incidentpilot investigate --model google_vertexai:gemini-2.5-flash   # Vertex AI (needs a GCP project)
+```
+
+For Vertex AI: `gcloud auth application-default login` and `export GOOGLE_CLOUD_PROJECT=<id>`.
+Without a GCP project, a free AI Studio key works too: `pip install langchain-google-genai`,
+`export GOOGLE_API_KEY=<key>`, then `--model google_genai:gemini-2.5-flash`.
+
+**Tracing:** set `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` to see every step, tool call and
+token count in LangSmith. No code changes needed.
+
+---
+
 ## Repo layout
 
 ```
@@ -129,6 +163,8 @@ incidentpilot/
   cli.py               `incidentpilot` command
   mcp_server.py        MCP tools: logs, metrics, revisions, runbooks, gated rollback
   approval.py          signed, expiring, single-use approval tokens
+  agent.py             LangGraph agent, RCAReport schema, citation check
+  baseline.py          offline rule-based model
   redact.py            PII redaction
   shopdemo/
     base.py            revisions, admin API, telemetry middleware, upstream calls

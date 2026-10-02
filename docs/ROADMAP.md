@@ -20,10 +20,11 @@ Built as one server (split per IAM role in Phase 6 if needed). Keyword runbook s
 
 **Done when:** Claude Code answers "why is orders failing?" using these MCP tools.
 
-## Phase 3: The LangGraph agent
-triage → plan → investigate ⇄ tools → hypothesize → verify (loops back if the evidence is weak) → report.
-LangChain for models, prompts, structured `RCAReport` output and MCP tool loading. Gemini on Vertex AI,
-plus an offline baseline model. Checkpointer, tracing, token and cost tracking.
+## Phase 3: The LangGraph agent ✅
+Built lean: investigate ⇄ tools → report → verify (no separate triage or plan nodes until evals show they help). Verification is a code check of citations. Offline `baseline` model included.
+
+LangChain for models, prompts, structured `RCAReport` output and MCP tool loading. Gemini on Vertex AI.
+In-memory checkpointer (Postgres in Phase 6), LangSmith tracing via env vars, token tracking.
 
 **Done when:** the agent names the right service and cites real log lines.
 
