@@ -281,11 +281,14 @@ def cmd_eval(args: argparse.Namespace) -> int:
 
     print(f"Evaluating {args.model} on {dataset}")
     summary, rows = asyncio.run(evals.run_eval(
-        dataset, args.model, concurrency=args.concurrency, limit=args.limit, judge_model=args.judge, on_result=progress,
+        dataset, args.model, concurrency=args.concurrency, limit=args.limit, faults=args.fault,
+        judge_model=args.judge, on_result=progress,
     ))
-    path = evals.write_results(summary, rows)
+    if args.label:
+        summary["model"] = args.label
+    path = evals.write_results(summary, rows, experiment=bool(args.label))
     print("\n" + evals.results_markdown([summary]))
-    print(f"Saved {path} and evals/RESULTS.md")
+    print(f"Saved {path} and evals/{'EXPERIMENTS' if args.label else 'RESULTS'}.md")
     if args.min_accuracy is not None and summary["accuracy"] < args.min_accuracy:
         print(f"FAIL: accuracy {summary['accuracy']:.0%} is below --min-accuracy {args.min_accuracy:.0%}", file=sys.stderr)
         return 1
@@ -338,7 +341,7 @@ def build_parser() -> argparse.ArgumentParser:
     approve.set_defaults(func=cmd_approve)
 
     inv = sub.add_parser("investigate", help="run the agent on the current incident")
-    inv.add_argument("--model", default=os.environ.get("INCIDENTPILOT_MODEL", "google_vertexai:gemini-2.5-flash"),
+    inv.add_argument("--model", default=os.environ.get("INCIDENTPILOT_MODEL") or "google_vertexai:gemini-3.8-flash",
                      help="'baseline' (offline) or a LangChain provider:model string")
     inv.add_argument("--alert", default="High 5xx error rate on frontend POST /checkout")
     inv.set_defaults(func=cmd_investigate)
@@ -356,6 +359,8 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--judge", help="model that grades each summary 1-5 (LLM-as-judge)")
     run.add_argument("--min-accuracy", type=float, help="exit 1 below this accuracy (CI gate)")
     run.add_argument("--dataset", help="dataset folder (default var/evals/dataset)")
+    run.add_argument("--fault", action="append", choices=[k.value for k in FaultKind], help="only these faults")
+    run.add_argument("--label", help="save as a named experiment in evals/EXPERIMENTS.md instead of RESULTS.md")
     ev.set_defaults(func=cmd_eval)
     return parser
 

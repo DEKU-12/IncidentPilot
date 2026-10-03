@@ -27,7 +27,7 @@ from typing_extensions import TypedDict
 
 from incidentpilot.config import REPO_ROOT
 
-DEFAULT_MODEL = os.environ.get("INCIDENTPILOT_MODEL", "google_vertexai:gemini-2.5-flash")
+DEFAULT_MODEL = os.environ.get("INCIDENTPILOT_MODEL") or "google_vertexai:gemini-3.8-flash"
 READ_ONLY_TOOLS = {"query_logs", "top_errors", "get_metrics", "list_revisions", "search_runbooks"}
 MAX_TOOL_CALLS = 15
 MAX_VERIFY_RETRIES = 2
@@ -53,6 +53,18 @@ Rules:
   will decide.
 - A rollback only helps if a new revision caused the problem. If no deploy is involved (for
   example an outside provider got slow), propose no action.
+
+Before proposing a rollback, check all three. A deploy shortly before an incident is NOT evidence
+on its own; harmless deploys happen all the time.
+1. Onset: did the failures start when the suspect revision went live, or were they already
+   happening on the previous revision?
+2. Old revisions: do the same errors appear on older revisions (the `revision` field of log
+   entries)? If so, the new revision did not cause them.
+3. Mechanism: does something the revision CHANGED (its commit or its env_changes) explain HOW
+   requests fail? A code change can explain a new exception; a removed or changed setting can
+   explain a config or capacity failure. A docs, CI or dependency bump does not explain an
+   external provider breaching its SLO. If the evidence shows a dependency outside the service
+   got slow, propose no action even if a deploy happened.
 """
 
 REPORT_PROMPT = """Write the root-cause report now. Cite as evidence_ids the `id` values of log
@@ -67,13 +79,29 @@ class RCAReport(BaseModel):
     )
     fault_category: Literal[
         "bad_deploy", "config_error", "connection_exhaustion", "memory_leak", "slow_dependency", "unknown"
-    ]
+    ] = Field(
+        description=(
+            "Classify by HOW requests fail, not by what triggered it. "
+            "bad_deploy: a code change raises exceptions (e.g. TypeError). "
+            "config_error: a setting is missing or invalid, so requests fail outright (e.g. KeyError on an env var). "
+            "connection_exhaustion: requests time out waiting for a limited resource such as the DB connection "
+            "pool, even if a config change shrank it. "
+            "memory_leak: memory grows until the container is OOM-killed, even if a config change caused it. "
+            "slow_dependency: something the service calls got slow and callers time out; no deploy involved. "
+            "unknown: none of these."
+        )
+    )
     summary: str = Field(description="Two or three sentences: what broke, why, and the evidence.")
     evidence_ids: list[str] = Field(description="`id` values of log entries that support the conclusion.")
     confidence: float = Field(ge=0, le=1)
     proposed_action: Literal["rollback", "none"]
     rollback_to_revision: str | None = Field(
         default=None, description="Revision to roll back to, when proposed_action is rollback."
+    )
+    rollback_evidence: str | None = Field(
+        default=None,
+        description="Required when proposing a rollback: which change in the bad revision (commit or env var) "
+        "explains how requests fail, and why the failures are not coming from somewhere else.",
     )
 
 
@@ -88,11 +116,23 @@ class AgentState(TypedDict):
 
 def make_model(name: str = DEFAULT_MODEL) -> BaseChatModel:
     """`baseline` for the offline rule-based model, otherwise any LangChain
-    `provider:model` string, e.g. google_vertexai:gemini-2.5-flash or google_vertexai:gemini-2.5-pro."""
+    `provider:model` string, e.g. google_vertexai:gemini-3.8-flash or google_vertexai:gemini-3.1-pro-preview."""
     if name == "baseline":
         from incidentpilot.baseline import BaselineModel
 
         return BaselineModel()
+    if name.startswith("google_vertexai:"):
+        # langchain-google-vertexai ignores GOOGLE_CLOUD_LOCATION and defaults to us-central1,
+        # where the newest Gemini models aren't served.
+        return init_chat_model(
+            name,
+            temperature=0,
+            project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
+            location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
+        )
+    if name.startswith("anthropic:"):
+        # Current Claude models reject sampling params (temperature) and control depth with effort instead.
+        return init_chat_model(name, max_tokens=16000)
     return init_chat_model(name, temperature=0)
 
 
@@ -112,6 +152,11 @@ def check_report(report: RCAReport | None, messages: list[AnyMessage]) -> list[s
     if missing:
         problems.append(f"These evidence_ids never appeared in any tool result: {', '.join(missing)}.")
     if report.proposed_action == "rollback":
+        if not (report.rollback_evidence or "").strip():
+            problems.append(
+                "A rollback was proposed without rollback_evidence. Name the change in the bad revision that "
+                "explains the failure, or propose no action if nothing it changed explains it."
+            )
         rev = report.rollback_to_revision or ""
         if not re.fullmatch(rf"{report.root_cause_service}-\d{{5}}", rev) or rev not in seen:
             problems.append(
@@ -124,7 +169,9 @@ def check_report(report: RCAReport | None, messages: list[AnyMessage]) -> list[s
 def build_graph(model: BaseChatModel, tools: list[BaseTool], checkpointer: Any = None):
     tools = [t for t in tools if t.name in READ_ONLY_TOOLS]
     investigator = model.bind_tools(tools)
-    reporter = model.with_structured_output(RCAReport, include_raw=True)
+    # Claude rejects forced tool calls, so use its native JSON-schema output for the report.
+    method = "json_schema" if getattr(model, "_llm_type", "") == "anthropic-chat" else "function_calling"
+    reporter = model.with_structured_output(RCAReport, include_raw=True, method=method)
     system = SystemMessage(SYSTEM_PROMPT.format(max_calls=MAX_TOOL_CALLS))
 
     def investigate(state: AgentState) -> dict:

@@ -143,12 +143,12 @@ investigate ⇄ tools  →  report  →  verify ─┐
 
 ```bash
 incidentpilot investigate --model baseline                           # offline
-incidentpilot investigate --model google_vertexai:gemini-2.5-flash   # Vertex AI (needs a GCP project)
+incidentpilot investigate --model google_vertexai:gemini-3.8-flash   # Vertex AI (needs a GCP project)
 ```
 
 For Vertex AI: `gcloud auth application-default login` and `export GOOGLE_CLOUD_PROJECT=<id>`.
 Without a GCP project, a free AI Studio key works too: `pip install langchain-google-genai`,
-`export GOOGLE_API_KEY=<key>`, then `--model google_genai:gemini-2.5-flash`.
+`export GOOGLE_API_KEY=<key>`, then `--model google_genai:gemini-3.8-flash`.
 
 **Tracing:** set `LANGSMITH_TRACING=true` and `LANGSMITH_API_KEY` to see every step, tool call and
 token count in LangSmith. No code changes needed.
@@ -179,8 +179,8 @@ results report how often the judge agrees with you.
 ```bash
 incidentpilot eval generate -n 150                                   # record the dataset (~5 min)
 incidentpilot eval run --model baseline                              # offline
-incidentpilot eval run --model google_vertexai:gemini-2.5-flash \
-    --judge google_vertexai:gemini-2.5-pro                           # Gemini, graded by Gemini Pro
+incidentpilot eval run --model google_vertexai:gemini-3.8-flash \
+    --judge google_vertexai:gemini-3.1-pro-preview                           # Gemini, graded by Gemini Pro
 incidentpilot eval run --model baseline --min-accuracy 0.9           # exit 1 below 90% (CI gate)
 ```
 

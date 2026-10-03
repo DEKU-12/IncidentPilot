@@ -27,6 +27,6 @@ clear:
 eval-data:  ## record 150 incidents with known root causes
 	$(IP) eval generate -n 150
 
-eval:  ## score the agent (MODEL=google_vertexai:gemini-2.5-flash to use Gemini)
+eval:  ## score the agent (MODEL=google_vertexai:gemini-3.8-flash to use Gemini)
 	@test -d var/evals/dataset || $(IP) eval generate -n 150
 	$(IP) eval run --model $(or $(MODEL),baseline)

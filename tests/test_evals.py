@@ -14,10 +14,11 @@ from incidentpilot.agent import RCAReport
 CASE = {
     "truth": {
         "fault": "bad_deploy",
+        "revision_after": "orders-00003",
         "root_cause_service": "orders",
         "red_herring_service": "payments",
         "summary": "orders serializer bug",
-        "correct_action": {"type": "rollback", "service": "orders", "to_revision": "orders-00001"},
+        "correct_action": {"type": "rollback", "service": "orders", "to_revision": "orders-00002"},
     }
 }
 LOGS = {"real1": "orders", "real2": "payments"}
@@ -25,7 +26,8 @@ LOGS = {"real1": "orders", "real2": "payments"}
 
 def report(**kw) -> RCAReport:
     base = dict(root_cause_service="orders", fault_category="bad_deploy", summary="s", evidence_ids=["real1"],
-                confidence=0.9, proposed_action="rollback", rollback_to_revision="orders-00001")
+                confidence=0.9, proposed_action="rollback", rollback_to_revision="orders-00002",
+                rollback_evidence="orders-00003 broke the serializer")
     return RCAReport(**{**base, **kw})
 
 
@@ -33,6 +35,8 @@ def test_score_counts_only_fully_right_answers_as_correct():
     assert evals.score_case(report(), CASE, LOGS)["correct"]
     wrong_rev = evals.score_case(report(rollback_to_revision="orders-00003"), CASE, LOGS)
     assert not wrong_rev["correct"] and wrong_rev["harmful_rollback"]
+    too_far = evals.score_case(report(rollback_to_revision="orders-00001"), CASE, LOGS)
+    assert not too_far["correct"] and too_far["over_rollback"] and not too_far["harmful_rollback"]
     assert not evals.score_case(report(fault_category="config_error"), CASE, LOGS)["correct"]
     assert not evals.score_case(None, CASE, LOGS)["correct"]
 
@@ -42,6 +46,7 @@ def test_score_flags_rollbacks_when_no_action_was_right():
                       "correct_action": {"type": "none"}}}
     scored = evals.score_case(report(root_cause_service="payments", fault_category="slow_dependency",
                                      rollback_to_revision="payments-00001"), slow, LOGS)
+    assert not scored["over_rollback"]
     assert scored["harmful_rollback"] and not scored["correct"]
 
 

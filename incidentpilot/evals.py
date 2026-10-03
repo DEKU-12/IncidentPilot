@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import random
+import re
 import shutil
 import statistics
 import time
@@ -40,8 +41,17 @@ DECOY_COMMITS = [
     "ci: cache pip downloads",
     "refactor: rename internal helper, no behaviour change",
 ]
-# USD per 1M tokens (input, output). Check current Vertex AI pricing before quoting these.
-PRICES_PER_M_TOKENS = {"gemini-2.5-flash": (0.30, 2.50), "gemini-2.5-pro": (1.25, 10.00)}
+# USD per 1M tokens (input, output), matched by substring of the model name. Fill in from
+# https://ai.google.dev/pricing before quoting costs; models not listed show "–".
+# Checked 2026-10-02. gemini-3.8-flash doubles to (1.50, 7.50) on 2027-01-01.
+PRICES_PER_M_TOKENS: dict[str, tuple[float, float]] = {
+    "gemini-3.8-flash": (0.75, 3.75),
+    "gemini-3.1-flash-lite": (0.30, 2.50),
+    "gemini-3.1-pro-preview": (2.00, 12.00),
+    "claude-opus-5-5": (4.00, 20.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-haiku-4-5": (1.00, 5.00),
+}
 
 
 def default_dataset_dir() -> Path:
@@ -159,13 +169,21 @@ def score_case(report: RCAReport | None, case: dict[str, Any], log_index: dict[s
     truth_action = truth["correct_action"]
     if report is None:
         return {"service_ok": False, "category_ok": False, "action_ok": False, "correct": False,
-                "harmful_rollback": False, "cited": 0, "hallucinated": 0, "on_target": 0.0}
+                "harmful_rollback": False, "over_rollback": False, "cited": 0, "hallucinated": 0, "on_target": 0.0}
     service_ok = report.root_cause_service == truth["root_cause_service"]
     category_ok = report.fault_category == truth["fault"]
     if truth_action["type"] == "rollback":
         action_ok = report.proposed_action == "rollback" and report.rollback_to_revision == truth_action["to_revision"]
     else:
         action_ok = report.proposed_action == "none"
+    # A rollback that lands on a revision older than the bad one still fixes the incident, but also
+    # reverts harmless changes in between: an over-rollback, not a harmful one.
+    fixes_it = (
+        report.proposed_action == "rollback"
+        and truth_action["type"] == "rollback"
+        and report.root_cause_service == truth_action["service"]
+        and _revision_number(report.rollback_to_revision) < _revision_number(truth["revision_after"])
+    )
     grounded = [i for i in report.evidence_ids if i in log_index]
     on_target = [i for i in grounded if log_index[i] == truth["root_cause_service"]]
     return {
@@ -173,12 +191,19 @@ def score_case(report: RCAReport | None, case: dict[str, Any], log_index: dict[s
         "category_ok": category_ok,
         "action_ok": action_ok,
         "correct": service_ok and category_ok and action_ok,
-        # A rollback that a human would approve and that wouldn't fix anything, or rolls back the wrong thing.
-        "harmful_rollback": report.proposed_action == "rollback" and not action_ok,
+        # A rollback a human might approve that wouldn't fix the incident (wrong service, wrong revision,
+        # or a rollback when no deploy caused it).
+        "harmful_rollback": report.proposed_action == "rollback" and not action_ok and not fixes_it,
+        "over_rollback": fixes_it and not action_ok,
         "cited": len(report.evidence_ids),
         "hallucinated": len(report.evidence_ids) - len(grounded),
         "on_target": round(len(on_target) / len(grounded), 2) if grounded else 0.0,
     }
+
+
+def _revision_number(name: str | None) -> int:
+    match = re.search(r"-(\d+)$", name or "")
+    return int(match.group(1)) if match else 10**9
 
 
 def _cost(model_name: str, input_tokens: int, output_tokens: int) -> float | None:
@@ -264,13 +289,22 @@ async def run_case(case_dir: Path, model_name: str, judge: BaseChatModel | None 
     params = mcp_server_params()
     params["env"] = {**params["env"], "INCIDENTPILOT_VAR_DIR": str(case_dir), "INCIDENTPILOT_NOW": case["now"]}
     start = time.perf_counter()
-    try:
-        client = MultiServerMCPClient({"incidentpilot": params})
-        async with client.session("incidentpilot") as session:
-            tools = await load_mcp_tools(session)
-            state = await investigate_alert(case["alert"], make_model(model_name), tools, thread_id=case["case_id"])
-    except Exception as exc:  # an API error fails this case, not the whole run
-        row["error"] = f"{type(exc).__name__}: {exc}"[:300]
+    for attempt in range(2):  # retry once: an MCP subprocess occasionally fails to start under load
+        try:
+            client = MultiServerMCPClient({"incidentpilot": params})
+            async with client.session("incidentpilot") as session:
+                tools = await load_mcp_tools(session)
+                state = await investigate_alert(case["alert"], make_model(model_name), tools, thread_id=case["case_id"])
+            break
+        except Exception as exc:  # an API error fails this case, not the whole run
+            while isinstance(exc, BaseExceptionGroup) and exc.exceptions:  # MCP/anyio wrap the real error
+                exc = exc.exceptions[0]
+            error = f"{type(exc).__name__}: {exc}"[:300]
+            if attempt == 0 and time.perf_counter() - start < 5:  # failed before any real work
+                continue
+            row["error"] = error
+            break
+    if row["error"]:
         return {**row, **score_case(None, case, {}), "tool_calls": 0, "input_tokens": 0, "output_tokens": 0,
                 "latency_s": round(time.perf_counter() - start, 2), "verify_problems": 0, "report": None}
 
@@ -311,6 +345,7 @@ def summarize(rows: list[dict[str, Any]], model_name: str) -> dict[str, Any]:
         "category_accuracy": rate("category_ok"),
         "action_accuracy": rate("action_ok"),
         "harmful_rollback_rate": rate("harmful_rollback"),
+        "over_rollback_rate": rate("over_rollback"),
         "accuracy_with_noise": rate("correct", [r for r in rows if r["noise"]]),
         "accuracy_with_decoy_deploy": rate("correct", [r for r in rows if r["decoy"]]),
         "hallucinated_citations": sum(r["hallucinated"] for r in rows),
@@ -331,10 +366,14 @@ async def run_eval(
     *,
     concurrency: int = 4,
     limit: int | None = None,
+    faults: list[str] | None = None,
     judge_model: str | None = None,
     on_result=None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    case_dirs = sorted(p for p in dataset_dir.iterdir() if (p / "case.json").exists())[:limit]
+    case_dirs = sorted(p for p in dataset_dir.iterdir() if (p / "case.json").exists())
+    if faults:
+        case_dirs = [p for p in case_dirs if p.name.split("_", 2)[2] in faults]
+    case_dirs = case_dirs[:limit]
     if not case_dirs:
         raise FileNotFoundError(f"no eval cases in {dataset_dir}; run `incidentpilot eval generate` first")
     judge = make_model(judge_model) if judge_model else None
@@ -354,12 +393,18 @@ async def run_eval(
 # -- results ------------------------------------------------------------------
 
 
-def write_results(summary: dict[str, Any], rows: list[dict[str, Any]], results_dir: Path = RESULTS_DIR) -> Path:
+EXPERIMENTS_DIR = REPO_ROOT / "evals" / "experiments"
+
+
+def write_results(summary: dict[str, Any], rows: list[dict[str, Any]], *, experiment: bool = False) -> Path:
+    """Full runs go to evals/RESULTS.md; labelled partial runs go to evals/EXPERIMENTS.md."""
+    results_dir, report = (EXPERIMENTS_DIR, "EXPERIMENTS.md") if experiment else (RESULTS_DIR, "RESULTS.md")
     results_dir.mkdir(parents=True, exist_ok=True)
-    path = results_dir / f"{summary['model'].replace(':', '__').replace('/', '_')}.json"
+    name = re.sub(r"[^A-Za-z0-9.+-]+", "_", summary["model"]).strip("_")
+    path = results_dir / f"{name}.json"
     path.write_text(json.dumps({"summary": summary, "cases": rows}, indent=1))
     summaries = [json.loads(p.read_text())["summary"] for p in sorted(results_dir.glob("*.json"))]
-    (results_dir.parent / "RESULTS.md").write_text(results_markdown(summaries))
+    (REPO_ROOT / "evals" / report).write_text(results_markdown(summaries))
     return path
 
 
@@ -374,15 +419,18 @@ def results_markdown(summaries: list[dict[str, Any]]) -> str:
         "Generated by `incidentpilot eval run`. Each case is a recorded ShopDemo incident with a known root cause.",
         "**Correct** means the right service, the right fault category *and* the right action.",
         "",
-        "| Model | Cases | Correct | Service | Category | Action | Harmful rollbacks | With noise | With decoy deploy "
+        "Harmful rollbacks wouldn't fix the incident. Over-rollbacks fix it but also revert harmless changes.",
+        "",
+        "| Model | Cases | Correct | Service | Category | Action | Harmful rollbacks | Over-rollbacks | With noise | With decoy deploy "
         "| Made-up citations | Tool calls | Tokens | $/incident | p50 latency | Judge (1-5) |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for s in summaries:
         cost = "–" if s["cost_per_incident_usd"] is None else f"${s['cost_per_incident_usd']:.4f}"
         lines.append(
             f"| `{s['model']}` | {s['n']} | **{_pct(s['accuracy'])}** | {_pct(s['service_accuracy'])} "
             f"| {_pct(s['category_accuracy'])} | {_pct(s['action_accuracy'])} | {_pct(s['harmful_rollback_rate'])} "
+            f"| {_pct(s.get('over_rollback_rate'))} "
             f"| {_pct(s['accuracy_with_noise'])} | {_pct(s['accuracy_with_decoy_deploy'])} "
             f"| {s['hallucinated_citations']} | {s['avg_tool_calls']} | {s['avg_tokens']} | {cost} "
             f"| {s['p50_latency_s']}s | {s['judge_avg_score'] or '–'} |"

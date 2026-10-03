@@ -119,4 +119,6 @@ class BaselineModel(BaseChatModel):
             "confidence": 0.6,
             "proposed_action": action,
             "rollback_to_revision": target,
+            "rollback_evidence": f"{revs['serving']} changed {revs['revisions'][-1]['commit']!r} "
+            f"{revs['revisions'][-1]['env_changes'] or ''}".strip() if action == "rollback" else None,
         }

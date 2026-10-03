@@ -6,10 +6,13 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 SERVICES: tuple[str, ...] = ("frontend", "orders", "payments")
 DEFAULT_PORTS: dict[str, int] = {"frontend": 8001, "orders": 8002, "payments": 8003}
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(REPO_ROOT / ".env")  # real environment variables win over .env
 
 
 @dataclass(frozen=True)

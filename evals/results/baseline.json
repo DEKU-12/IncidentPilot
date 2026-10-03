@@ -7,6 +7,7 @@
   "category_accuracy": 1.0,
   "action_accuracy": 1.0,
   "harmful_rollback_rate": 0.0,
+  "over_rollback_rate": 0.0,
   "accuracy_with_noise": 1.0,
   "accuracy_with_decoy_deploy": 1.0,
   "hallucinated_citations": 0,
@@ -59,7 +60,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_001_config_error",
@@ -94,7 +96,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_002_connection_exhaustion",
@@ -129,7 +132,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_003_memory_leak",
@@ -164,7 +168,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_004_slow_dependency",
@@ -199,7 +204,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_005_bad_deploy",
@@ -234,7 +240,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_006_config_error",
@@ -269,7 +276,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_007_connection_exhaustion",
@@ -304,7 +312,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_008_memory_leak",
@@ -339,7 +348,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_009_slow_dependency",
@@ -374,7 +384,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_010_bad_deploy",
@@ -409,7 +420,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_011_config_error",
@@ -444,7 +456,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_012_connection_exhaustion",
@@ -479,7 +492,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_013_memory_leak",
@@ -514,7 +528,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_014_slow_dependency",
@@ -549,7 +564,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_015_bad_deploy",
@@ -584,7 +600,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_016_config_error",
@@ -619,7 +636,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_017_connection_exhaustion",
@@ -654,7 +672,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_018_memory_leak",
@@ -689,7 +708,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_019_slow_dependency",
@@ -724,7 +744,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_020_bad_deploy",
@@ -759,7 +780,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_021_config_error",
@@ -794,7 +816,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_022_connection_exhaustion",
@@ -829,7 +852,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_023_memory_leak",
@@ -864,7 +888,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_024_slow_dependency",
@@ -899,7 +924,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_025_bad_deploy",
@@ -934,7 +960,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_026_config_error",
@@ -969,7 +996,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_027_connection_exhaustion",
@@ -1004,7 +1032,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_028_memory_leak",
@@ -1039,7 +1068,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_029_slow_dependency",
@@ -1074,7 +1104,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_030_bad_deploy",
@@ -1109,7 +1140,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_031_config_error",
@@ -1144,7 +1176,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_032_connection_exhaustion",
@@ -1179,7 +1212,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_033_memory_leak",
@@ -1214,7 +1248,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_034_slow_dependency",
@@ -1249,7 +1284,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_035_bad_deploy",
@@ -1284,7 +1320,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_036_config_error",
@@ -1319,7 +1356,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_037_connection_exhaustion",
@@ -1354,7 +1392,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_038_memory_leak",
@@ -1389,7 +1428,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_039_slow_dependency",
@@ -1424,7 +1464,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_040_bad_deploy",
@@ -1459,7 +1500,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_041_config_error",
@@ -1494,7 +1536,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_042_connection_exhaustion",
@@ -1529,7 +1572,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_043_memory_leak",
@@ -1564,7 +1608,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_044_slow_dependency",
@@ -1599,7 +1644,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_045_bad_deploy",
@@ -1634,7 +1680,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_046_config_error",
@@ -1669,7 +1716,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_047_connection_exhaustion",
@@ -1704,7 +1752,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_048_memory_leak",
@@ -1739,7 +1788,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_049_slow_dependency",
@@ -1774,7 +1824,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_050_bad_deploy",
@@ -1809,7 +1860,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_051_config_error",
@@ -1844,7 +1896,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_052_connection_exhaustion",
@@ -1879,7 +1932,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_053_memory_leak",
@@ -1914,7 +1968,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_054_slow_dependency",
@@ -1949,7 +2004,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_055_bad_deploy",
@@ -1984,7 +2040,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_056_config_error",
@@ -2019,7 +2076,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_057_connection_exhaustion",
@@ -2054,7 +2112,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_058_memory_leak",
@@ -2089,7 +2148,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_059_slow_dependency",
@@ -2124,7 +2184,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_060_bad_deploy",
@@ -2159,7 +2220,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_061_config_error",
@@ -2194,7 +2256,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_062_connection_exhaustion",
@@ -2229,7 +2292,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_063_memory_leak",
@@ -2264,7 +2328,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_064_slow_dependency",
@@ -2299,7 +2364,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_065_bad_deploy",
@@ -2334,7 +2400,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_066_config_error",
@@ -2369,7 +2436,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_067_connection_exhaustion",
@@ -2404,7 +2472,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_068_memory_leak",
@@ -2439,7 +2508,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_069_slow_dependency",
@@ -2474,7 +2544,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_070_bad_deploy",
@@ -2509,7 +2580,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_071_config_error",
@@ -2544,7 +2616,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_072_connection_exhaustion",
@@ -2579,7 +2652,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_073_memory_leak",
@@ -2614,7 +2688,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_074_slow_dependency",
@@ -2649,7 +2724,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_075_bad_deploy",
@@ -2684,7 +2760,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_076_config_error",
@@ -2719,7 +2796,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_077_connection_exhaustion",
@@ -2754,7 +2832,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_078_memory_leak",
@@ -2789,7 +2868,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_079_slow_dependency",
@@ -2824,7 +2904,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_080_bad_deploy",
@@ -2859,7 +2940,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_081_config_error",
@@ -2894,7 +2976,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_082_connection_exhaustion",
@@ -2929,7 +3012,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_083_memory_leak",
@@ -2964,7 +3048,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_084_slow_dependency",
@@ -2999,7 +3084,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_085_bad_deploy",
@@ -3034,7 +3120,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_086_config_error",
@@ -3069,7 +3156,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_087_connection_exhaustion",
@@ -3104,7 +3192,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_088_memory_leak",
@@ -3139,7 +3228,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_089_slow_dependency",
@@ -3174,7 +3264,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_090_bad_deploy",
@@ -3209,7 +3300,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_091_config_error",
@@ -3244,7 +3336,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_092_connection_exhaustion",
@@ -3279,7 +3372,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_093_memory_leak",
@@ -3314,7 +3408,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_094_slow_dependency",
@@ -3349,7 +3444,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_095_bad_deploy",
@@ -3384,7 +3480,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_096_config_error",
@@ -3419,7 +3516,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_097_connection_exhaustion",
@@ -3454,7 +3552,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_098_memory_leak",
@@ -3489,7 +3588,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_099_slow_dependency",
@@ -3524,7 +3624,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_100_bad_deploy",
@@ -3559,7 +3660,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_101_config_error",
@@ -3594,7 +3696,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_102_connection_exhaustion",
@@ -3629,7 +3732,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_103_memory_leak",
@@ -3664,7 +3768,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_104_slow_dependency",
@@ -3699,7 +3804,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_105_bad_deploy",
@@ -3734,7 +3840,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_106_config_error",
@@ -3769,7 +3876,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_107_connection_exhaustion",
@@ -3804,7 +3912,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_108_memory_leak",
@@ -3839,7 +3948,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_109_slow_dependency",
@@ -3874,7 +3984,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_110_bad_deploy",
@@ -3909,7 +4020,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_111_config_error",
@@ -3944,7 +4056,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_112_connection_exhaustion",
@@ -3979,7 +4092,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_113_memory_leak",
@@ -4014,7 +4128,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_114_slow_dependency",
@@ -4049,7 +4164,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_115_bad_deploy",
@@ -4084,7 +4200,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_116_config_error",
@@ -4119,7 +4236,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_117_connection_exhaustion",
@@ -4154,7 +4272,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_118_memory_leak",
@@ -4189,7 +4308,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_119_slow_dependency",
@@ -4224,7 +4344,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_120_bad_deploy",
@@ -4259,7 +4380,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_121_config_error",
@@ -4294,7 +4416,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_122_connection_exhaustion",
@@ -4329,7 +4452,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_123_memory_leak",
@@ -4364,7 +4488,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_124_slow_dependency",
@@ -4399,7 +4524,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_125_bad_deploy",
@@ -4434,7 +4560,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_126_config_error",
@@ -4469,7 +4596,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_127_connection_exhaustion",
@@ -4504,7 +4632,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_128_memory_leak",
@@ -4538,7 +4667,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_129_slow_dependency",
@@ -4573,7 +4703,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_130_bad_deploy",
@@ -4608,7 +4739,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_131_config_error",
@@ -4643,7 +4775,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_132_connection_exhaustion",
@@ -4678,7 +4811,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_133_memory_leak",
@@ -4712,7 +4846,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_134_slow_dependency",
@@ -4747,7 +4882,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_135_bad_deploy",
@@ -4782,7 +4918,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_136_config_error",
@@ -4817,7 +4954,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_137_connection_exhaustion",
@@ -4852,7 +4990,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_138_memory_leak",
@@ -4887,7 +5026,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_139_slow_dependency",
@@ -4922,7 +5062,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_140_bad_deploy",
@@ -4957,7 +5098,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_141_config_error",
@@ -4992,7 +5134,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_142_connection_exhaustion",
@@ -5027,7 +5170,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_143_memory_leak",
@@ -5062,7 +5206,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_144_slow_dependency",
@@ -5097,7 +5242,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_145_bad_deploy",
@@ -5132,7 +5278,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_146_config_error",
@@ -5167,7 +5314,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "payments-00002"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_147_connection_exhaustion",
@@ -5202,7 +5350,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "orders-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_148_memory_leak",
@@ -5237,7 +5386,8 @@
     "confidence": 0.6,
     "proposed_action": "rollback",
     "rollback_to_revision": "frontend-00001"
-   }
+   },
+   "over_rollback": false
   },
   {
    "case_id": "case_149_slow_dependency",
@@ -5272,7 +5422,8 @@
     "confidence": 0.6,
     "proposed_action": "none",
     "rollback_to_revision": null
-   }
+   },
+   "over_rollback": false
   }
  ]
 }

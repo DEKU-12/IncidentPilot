@@ -57,8 +57,10 @@ def test_check_report_rejects_invented_evidence_and_revisions():
     good = RCAReport(
         root_cause_service="orders", fault_category="bad_deploy", summary="s", evidence_ids=["abc123"],
         confidence=0.9, proposed_action="rollback", rollback_to_revision="orders-00001",
+        rollback_evidence="orders-00002 changed the serializer; the TypeError comes from that code",
     )
     assert check_report(good, seen) == []
+    assert "without rollback_evidence" in check_report(good.model_copy(update={"rollback_evidence": None}), seen)[0]
     assert "never appeared" in check_report(good.model_copy(update={"evidence_ids": ["fake99"]}), seen)[0]
     assert "not a orders revision" in check_report(good.model_copy(update={"rollback_to_revision": "orders-00007"}), seen)[0]
     assert check_report(None, seen)
