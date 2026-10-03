@@ -9,7 +9,9 @@ real log entries. Any fix, such as a rollback, waits for a human to approve it.
 To measure how well it works, it investigates a demo shop that we break on purpose, so the true root
 cause of every incident is known.
 
-> **Status:** Phases 1–4 of 6 are done (the demo shop, the MCP server, the LangGraph agent and the evals). See [docs/ROADMAP.md](docs/ROADMAP.md).
+> **Results:** Gemini 3.8 Flash finds the right root cause *and* the right fix in **98% of 150 recorded
+> incidents** with **0% harmful rollbacks**, **0 made-up citations** and **0 of 40 prompt-injection attacks**
+> succeeding, at **$0.048 per incident**. See [evals/RESULTS.md](evals/RESULTS.md). See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 
@@ -186,6 +188,79 @@ incidentpilot eval run --model baseline --min-accuracy 0.9           # exit 1 be
 
 ---
 
+## Guardrails and human approval
+
+Defense in depth, so no single failure lets the agent change production:
+
+| Layer | What it stops |
+|---|---|
+| **PII redaction** | customer emails and card numbers never reach the model |
+| **Injection guard** ([guard.py](incidentpilot/guard.py)) | log text that addresses the AI agent (e.g. an attacker-typed coupon code) is quarantined before the model sees it |
+| **Read-only agent** | the model is only given read tools; it can propose a rollback, never run one |
+| **Citation and rollback checks** | every cited log ID must exist; a rollback needs `rollback_evidence` naming the change that explains the failure |
+| **Human approval** | a proposed rollback pauses the LangGraph run (`interrupt`) until a person answers |
+| **Signed approval tokens** | the rollback tool refuses without an HMAC token for that exact service and revision, minted in code after a human says yes; it expires in 10 minutes and works once |
+| **Budgets** | at most 15 tool calls and 2 verification retries per incident |
+
+```bash
+incidentpilot investigate --approve        # shows the proposal and asks before rolling back
+```
+
+**Red-team cases.** `incidentpilot eval generate --attacks` records incidents where "customers" type
+coupon codes that tell the AI to roll back a different, healthy service. The **attack success** metric
+counts how often the agent proposes the attacker's rollback. Run with `--no-guard` to measure the
+model on its own. Results are in [evals/EXPERIMENTS.md](evals/EXPERIMENTS.md).
+
+---
+
+## Deploy to GCP
+
+```
+ Cloud Monitoring alert (frontend 5xx) ──► Pub/Sub ──push (OIDC)──► incidentpilot-agent (Cloud Run, private)
+                                                                         │ LangGraph + Gemini on Vertex AI
+                                                                         ▼ MCP over HTTP (ID token)
+ shopdemo-frontend ─► shopdemo-orders ─► shopdemo-payments        incidentpilot-mcp (Cloud Run, private)
+ (Cloud Run, public demo; admin API needs a Secret Manager token)    reads Cloud Logging, calls the admin API
+          └──────────── structured JSON logs + metrics ──► Cloud Logging ◄──────┘
+```
+
+Everything is in [infra/terraform](infra/terraform): Cloud Run services that scale to zero, Artifact
+Registry, Cloud Build, Secret Manager (generated admin token and approval-signing key), one service
+account per role with only the permissions it needs, a log-based metric, an alert policy, Pub/Sub with
+an authenticated push subscription, and an optional budget alert. There is no always-on database, so an
+idle deployment costs close to nothing.
+
+```bash
+brew install hashicorp/tap/terraform     # once
+make deploy                              # Cloud Build + Terraform; asks before changing anything
+make cloud-urls                          # service URLs
+make destroy                             # delete everything
+```
+
+Optional budget alert: `make deploy TFVARS="-var project_id=<id> -var billing_account=<XXXXXX-XXXXXX-XXXXXX>"`.
+
+**Use it:** send traffic and break the cloud shop, then watch the agent investigate on its own:
+
+```bash
+export FRONTEND_URL=$(terraform -chdir=infra/terraform output -raw frontend_url)
+export ORDERS_URL=${FRONTEND_URL/frontend/orders} PAYMENTS_URL=${FRONTEND_URL/frontend/payments}
+export SHOPDEMO_ADMIN_TOKEN=$(gcloud secrets versions access latest --secret=shopdemo-admin-token)
+incidentpilot chaos inject bad_deploy && incidentpilot traffic --rps 5 --duration 180
+gcloud logging read 'jsonPayload.message="rca_report"' --limit 1 --format json   # the agent's report
+```
+
+The cloud agent is read-only. To approve a fix, run the agent from your laptop against the cloud MCP server:
+
+```bash
+export APPROVAL_SECRET=$(gcloud secrets versions access latest --secret=incidentpilot-approval-secret)
+incidentpilot investigate --approve --mcp-url $(terraform -chdir=infra/terraform output -raw mcp_url)
+```
+
+**CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)): tests, an offline eval gate that fails the
+build below 95% accuracy, and `terraform validate` on every push.
+
+---
+
 ## Repo layout
 
 ```
@@ -199,7 +274,9 @@ incidentpilot/
   agent.py             LangGraph agent, RCAReport schema, citation check
   baseline.py          offline rule-based model
   evals.py             dataset recording, replay, scoring, LLM-as-judge
+  agent_service.py     the agent as a Cloud Run service (Pub/Sub alerts in, reports out)
   redact.py            PII redaction
+  guard.py             prompt-injection guard for log text
   shopdemo/
     base.py            revisions, admin API, telemetry middleware, upstream calls
     frontend.py        /products, /checkout
@@ -210,6 +287,10 @@ incidentpilot/
     telemetry.py       JSON logger and metrics
     inprocess.py       all three services in one process (tests, evals)
 runbooks/              on-call runbooks the agent can search
+infra/terraform/       the whole GCP deployment
+Dockerfile             one image for every role
+cloudbuild.yaml        image build
+docs/RESUME.md         resume bullets and interview notes
 evals/RESULTS.md       latest eval results per model
 tests/                 pytest suite
 docs/ROADMAP.md        the six build phases

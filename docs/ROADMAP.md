@@ -37,15 +37,19 @@ human grades. Model and prompt experiments, kept in a results table.
 
 **Done when:** `make eval` prints a results table.
 
-## Phase 5: Guardrails and human-in-the-loop
-Untrusted-data handling, an injection detector, read and write tools kept separate, a LangGraph
-`interrupt` for approval, budgets, citation checks, and a red-team suite of 40 attacks.
+## Phase 5: Guardrails and human-in-the-loop ✅
+Built lean: regex injection guard (LLM classifier only if red-team results need it), LangGraph `interrupt` approval that mints the token in code, and attack eval cases with an attack-success metric, run with the guard on and off.
+
+PII redaction, read-only agent, citation and rollback-evidence checks, budgets, and signed one-time
+approval tokens (from earlier phases) complete the layers.
 
 **Done when:** the injection demo fails safely and evals show 0 unsafe actions.
 
-## Phase 6: GCP, CI/CD and resume packaging
-Terraform (Cloud Run, Pub/Sub, Cloud SQL + pgvector, Secret Manager, IAM, a budget alert), real Cloud
-Logging and Vertex AI, Cloud Build, GitHub Actions with an eval check, docs, a demo video and resume
-bullets.
+## Phase 6: GCP, CI/CD and resume packaging ✅ (code; deploy pending)
+Built lean: one Docker image, Cloud Run everywhere (scale to zero, no Cloud SQL), MCP reads Cloud Logging, agent woken by alert → Pub/Sub push, rollbacks stay human-approved from the CLI. CI runs tests, an offline eval gate and terraform validate.
+
+Terraform (Cloud Run, Pub/Sub, Cloud Monitoring alert, Secret Manager, IAM, optional budget alert),
+Cloud Logging and Vertex AI, Cloud Build, GitHub Actions, README and resume notes. Skipped: Cloud SQL
+(an in-memory checkpointer is enough while rollbacks are approved from the CLI); add it with an approval UI.
 
 **Done when:** a real GCP alert triggers the agent automatically.

@@ -17,8 +17,9 @@ from typing import Any
 
 import httpx
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
-from incidentpilot import approval
+from incidentpilot import approval, guard
 from incidentpilot.config import REPO_ROOT, SERVICES, Settings
 from incidentpilot.redact import redact
 
@@ -70,17 +71,56 @@ def _entry_view(e: dict[str, Any]) -> dict[str, Any]:
         "severity": e["severity"],
         "service": e["service"],
         "revision": e["revision"],
-        "message": redact(e["message"])[:500],
     }
+    view["message"], quarantined = guard.screen(redact(e["message"])[:500])
+    if quarantined:
+        view["quarantined"] = True
     if "trace_id" in e:
         view["trace_id"] = e["trace_id"]
     stack = e.get("context", {}).get("stack_trace")
     if stack:
-        view["stack_trace"] = redact(stack)[-800:]
+        view["stack_trace"] = guard.screen(redact(stack)[-800:])[0]
     return view
 
 
+def _on_gcp() -> bool:
+    return os.environ.get("INCIDENTPILOT_BACKEND") == "gcp"
+
+
+def _from_cloud(entry: Any) -> dict[str, Any]:
+    """A Cloud Logging entry in the same shape as a local log line. Cloud Logging lifts
+    `severity` (and sometimes `timestamp`) out of the JSON payload, so read those from the entry."""
+    payload = dict(entry.payload) if isinstance(entry.payload, dict) else {"message": str(entry.payload)}
+    stamp = entry.timestamp.isoformat(timespec="milliseconds").replace("+00:00", "Z") if entry.timestamp else ""
+    return {
+        **payload,
+        "insert_id": payload.get("insert_id") or entry.insert_id,
+        "timestamp": payload.get("timestamp") or stamp,
+        "severity": entry.severity or payload.get("severity", "DEFAULT"),
+        "service": payload.get("service", ""),
+        "revision": payload.get("revision", ""),
+        "message": payload.get("message", ""),
+    }
+
+
+def _cloud_entries(extra_filter: str, minutes: float) -> list[dict[str, Any]]:
+    from google.cloud import logging as gcl
+
+    client = gcl.Client(project=os.environ.get("GOOGLE_CLOUD_PROJECT"))
+    flt = (
+        'resource.type="cloud_run_revision" AND resource.labels.service_name:"shopdemo-" '
+        f'AND timestamp>="{_since(minutes)}" AND {extra_filter}'
+    )
+    # ponytail: 1000 newest entries per call; page through if incidents get noisier than that.
+    entries = client.list_entries(filter_=flt, order_by=gcl.DESCENDING, max_results=1000)
+    return [_from_cloud(e) for e in reversed(list(entries))]
+
+
 def _logs(service: str | None, min_severity: str, minutes: float) -> list[dict[str, Any]]:
+    if _on_gcp():
+        names = " OR ".join(f'jsonPayload.service="{n}"' for n in _check_service(service))
+        sev = "DEFAULT" if min_severity == "DEBUG" else min_severity
+        return _cloud_entries(f'severity>={sev} AND ({names}) AND jsonPayload.message!="metrics"', minutes)
     settings = Settings.from_env()
     since, floor = _since(minutes), SEVERITIES.index(min_severity)
     entries = []
@@ -106,7 +146,7 @@ _NORMALIZE = re.compile(r"\b(?:ord|ch|inc)_[0-9a-f]+\b|\b[0-9a-f]{12,}\b|\d+(?:\
 
 
 def _signature(message: str) -> str:
-    return _NORMALIZE.sub("#", redact(message))
+    return guard.screen(_NORMALIZE.sub("#", redact(message)))[0]
 
 
 # -- observability tools --------------------------------------------------------
@@ -157,6 +197,9 @@ def get_metrics(service: str, minutes: float = 15) -> list[dict[str, Any]]:
     """Metric points for one service (one point per ~5s): requests, errors_5xx, error_rate,
     p50_ms, p95_ms, max_ms, memory_mb, restarts, and for orders db_pool_size/db_pool_in_use."""
     _check_service(service)
+    if _on_gcp():
+        found = _cloud_entries(f'jsonPayload.message="metrics" AND jsonPayload.service="{service}"', minutes)
+        return [e["metrics"] for e in found if "metrics" in e][-120:]
     since = _since(minutes)
     points = _read_jsonl(Settings.from_env().metrics_dir / f"{service}.jsonl")
     return [p for p in points if p["timestamp"] >= since][-120:]
@@ -218,7 +261,14 @@ async def rollback(service: str, to_revision: str, approval_token: str) -> dict[
     return await _admin(service, "POST", "/admin/rollback", {"to_revision": to_revision})
 
 
-def main(http: bool = False) -> None:
+def main(http: bool = False, host: str = "127.0.0.1", port: int = 8000) -> None:
+    if http:
+        mcp.settings.host, mcp.settings.port = host, port
+        mcp.settings.stateless_http = True  # any Cloud Run instance can serve any request
+        if host != "127.0.0.1":
+            # DNS-rebinding protection only allows localhost Host headers, which rejects *.run.app (HTTP 421).
+            # On Cloud Run every request already needs a Google ID token, so the protection adds nothing.
+            mcp.settings.transport_security = TransportSecuritySettings(enable_dns_rebinding_protection=False)
     mcp.run(transport="streamable-http" if http else "stdio")
 
 

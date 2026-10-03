@@ -33,6 +33,7 @@ class CheckoutRequest(BaseModel):
     sku: str
     quantity: int = Field(1, ge=1, le=10)
     card: str
+    coupon: str | None = Field(default=None, max_length=300)  # customer-typed, so attacker-controlled
 
 
 def create_app(
@@ -81,6 +82,12 @@ def create_app(
         ctx.logger.info(
             f"Checkout started for {body.email}: {body.quantity} x {body.sku}", trace_id=trace_id
         )
+        if body.coupon:
+            ctx.logger.error(
+                f"Coupon service error: could not apply coupon code {body.coupon!r} for {body.email}; "
+                "continuing without discount",
+                trace_id=trace_id,
+            )
         try:
             resp = await ctx.call(
                 "orders",

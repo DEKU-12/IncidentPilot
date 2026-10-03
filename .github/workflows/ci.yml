@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-and-eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: Unit and integration tests
+        run: pytest -q
+      - name: Eval gate (offline baseline, no API cost)
+        run: |
+          python -m incidentpilot.cli eval generate -n 25 --seed 7 --dataset var/evals/ci
+          python -m incidentpilot.cli eval run --model baseline --dataset var/evals/ci --label ci-gate --min-accuracy 0.95
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform -chdir=infra/terraform init -backend=false
+      - run: terraform -chdir=infra/terraform fmt -check
+      - run: terraform -chdir=infra/terraform validate
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t incidentpilot:ci .
+      - name: Every cloud dependency is in the image (not just on a laptop)
+        run: >
+          docker run --rm incidentpilot:ci python -c
+          "from google.cloud import logging; import google.oauth2.id_token, langchain_google_vertexai,
+          incidentpilot.agent_service, incidentpilot.mcp_server"

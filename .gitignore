@@ -18,3 +18,9 @@ var/
 
 # Scratch files from the idea-selection run
 .arena/
+
+# Terraform (state holds the generated secrets: never commit it)
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl

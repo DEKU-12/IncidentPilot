@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import operator
 import os
+from collections.abc import Callable
 import re
 import sys
 from typing import Annotated, Any, Literal
@@ -22,9 +23,11 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
+from langgraph.types import Command, interrupt
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 
+from incidentpilot import approval as approval_tokens
 from incidentpilot.config import REPO_ROOT
 
 DEFAULT_MODEL = os.environ.get("INCIDENTPILOT_MODEL") or "google_vertexai:gemini-3.8-flash"
@@ -110,7 +113,9 @@ class AgentState(TypedDict):
     report: RCAReport | None
     verify_retries: int
     retry: bool
+    verified: bool
     problems: Annotated[list[str], operator.add]
+    remediation: dict | None
     report_usage: Annotated[list[dict], operator.add]
 
 
@@ -166,8 +171,9 @@ def check_report(report: RCAReport | None, messages: list[AnyMessage]) -> list[s
     return problems
 
 
-def build_graph(model: BaseChatModel, tools: list[BaseTool], checkpointer: Any = None):
-    tools = [t for t in tools if t.name in READ_ONLY_TOOLS]
+def build_graph(model: BaseChatModel, tools: list[BaseTool], checkpointer: Any = None, *, with_approval: bool = False):
+    rollback_tool = next((t for t in tools if t.name == "rollback"), None)
+    tools = [t for t in tools if t.name in READ_ONLY_TOOLS]  # the model never gets the write tool
     investigator = model.bind_tools(tools)
     # Claude rejects forced tool calls, so use its native JSON-schema output for the report.
     method = "json_schema" if getattr(model, "_llm_type", "") == "anthropic-chat" else "function_calling"
@@ -190,12 +196,12 @@ def build_graph(model: BaseChatModel, tools: list[BaseTool], checkpointer: Any =
     def verify(state: AgentState) -> dict:
         problems = check_report(state["report"], state["messages"])
         if not problems:
-            return {"retry": False}
+            return {"retry": False, "verified": True}
         if state["verify_retries"] >= MAX_VERIFY_RETRIES:
             report = state["report"]
             if report is not None:
                 report = report.model_copy(update={"confidence": min(report.confidence, 0.3)})
-            return {"report": report, "retry": False, "problems": problems}
+            return {"report": report, "retry": False, "verified": False, "problems": problems}
         feedback = "Your report failed verification:\n- " + "\n- ".join(problems) + "\nInvestigate further if needed."
         return {
             "messages": [HumanMessage(feedback)],
@@ -205,7 +211,35 @@ def build_graph(model: BaseChatModel, tools: list[BaseTool], checkpointer: Any =
         }
 
     def after_verify(state: AgentState) -> str:
-        return "investigate" if state["retry"] else END
+        if state["retry"]:
+            return "investigate"
+        return "approve" if with_approval else END
+
+    async def approve(state: AgentState) -> dict:
+        """Human in the loop: pause, show the proposal, and act only on an explicit yes."""
+        r = state["report"]
+        if r is None or r.proposed_action != "rollback":
+            return {"remediation": {"status": "no action proposed"}}
+        if not state["verified"]:
+            return {"remediation": {"status": "not offered: the report failed verification"}}
+        decision = interrupt(
+            {
+                "service": r.root_cause_service,
+                "to_revision": r.rollback_to_revision,
+                "summary": r.summary,
+                "rollback_evidence": r.rollback_evidence,
+                "evidence_ids": r.evidence_ids,
+                "confidence": r.confidence,
+            }
+        )
+        if not decision.get("approved"):
+            return {"remediation": {"status": "rejected by human"}}
+        # The token is minted here, in code, only after a human said yes. The model can't reach this.
+        token = approval_tokens.mint(r.root_cause_service, r.rollback_to_revision)
+        result = await rollback_tool.ainvoke(
+            {"service": r.root_cause_service, "to_revision": r.rollback_to_revision, "approval_token": token}
+        )
+        return {"remediation": {"status": "rolled back", "result": str(result)}}
 
     graph = StateGraph(AgentState)
     graph.add_node("investigate", investigate)
@@ -216,7 +250,9 @@ def build_graph(model: BaseChatModel, tools: list[BaseTool], checkpointer: Any =
     graph.add_conditional_edges("investigate", after_investigate, ["tools", "report"])
     graph.add_edge("tools", "investigate")
     graph.add_edge("report", "verify")
-    graph.add_conditional_edges("verify", after_verify, ["investigate", END])
+    graph.add_node("approve", approve)
+    graph.add_conditional_edges("verify", after_verify, ["investigate", "approve", END])
+    graph.add_edge("approve", END)
     # ponytail: in-memory checkpoints; Postgres checkpointer on Cloud SQL in Phase 6.
     return graph.compile(checkpointer=checkpointer or InMemorySaver())
 
@@ -226,20 +262,29 @@ async def investigate_alert(
     model: BaseChatModel,
     tools: list[BaseTool],
     thread_id: str = "incident",
+    approver: Callable[[dict[str, Any]], bool] | None = None,
 ) -> dict[str, Any]:
-    """Run one investigation. Returns the final state plus usage numbers."""
-    graph = build_graph(model, tools)
+    """Run one investigation. Returns the final state plus usage numbers.
+
+    With an `approver`, a proposed rollback pauses for that human decision and runs only on yes."""
+    graph = build_graph(model, tools, with_approval=approver is not None)
+    config = {"configurable": {"thread_id": thread_id}, "recursion_limit": 80}
     state = await graph.ainvoke(
         {
             "messages": [HumanMessage(f"ALERT: {alert}")],
             "report": None,
             "verify_retries": 0,
             "retry": False,
+            "verified": False,
             "problems": [],
             "report_usage": [],
+            "remediation": None,
         },
-        config={"configurable": {"thread_id": thread_id}, "recursion_limit": 80},
+        config=config,
     )
+    while state.get("__interrupt__"):
+        proposal = state["__interrupt__"][0].value
+        state = await graph.ainvoke(Command(resume={"approved": bool(approver(proposal))}), config=config)
     usage = {"input_tokens": 0, "output_tokens": 0}
     metas = [getattr(m, "usage_metadata", None) or {} for m in state["messages"]] + state["report_usage"]
     for meta in metas:
@@ -250,6 +295,35 @@ async def investigate_alert(
         (c["name"], c["args"]) for m in state["messages"] if isinstance(m, AIMessage) for c in m.tool_calls
     ]
     return state
+
+
+def _identity_token(audience: str) -> str:
+    """A Google ID token for calling a private Cloud Run service: the service account's on GCP,
+    or your gcloud login on a laptop."""
+    try:
+        import google.auth.transport.requests
+        import google.oauth2.id_token
+
+        return google.oauth2.id_token.fetch_id_token(google.auth.transport.requests.Request(), audience)
+    except Exception:
+        import subprocess
+
+        return subprocess.run(
+            ["gcloud", "auth", "print-identity-token"], check=True, capture_output=True, text=True
+        ).stdout.strip()
+
+
+def mcp_connection(url: str | None = None) -> dict[str, Any]:
+    """A remote MCP server over streamable HTTP when `url` (or MCP_URL) is set, else a local stdio one."""
+    url = url or os.environ.get("MCP_URL")
+    if not url:
+        return mcp_server_params()
+    base = url.rstrip("/")
+    return {
+        "transport": "streamable_http",
+        "url": f"{base}/mcp",
+        "headers": {"Authorization": f"Bearer {_identity_token(base)}"},
+    }
 
 
 def mcp_server_params() -> dict[str, Any]:

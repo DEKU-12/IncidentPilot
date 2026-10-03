@@ -10,6 +10,7 @@ import asyncio
 import json
 import random
 import secrets
+import sys
 import time
 import traceback
 import uuid
@@ -59,7 +60,7 @@ NOISE: dict[str, list[str]] = {
 }
 
 TRACE_KEY = "incidentpilot.trace_id"
-UNTRACKED_PREFIXES = ("/admin", "/healthz", "/metrics")
+UNTRACKED_PREFIXES = ("/admin", "/health", "/metrics")
 
 
 @dataclass
@@ -289,6 +290,9 @@ class ServiceContext:
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(point) + "\n")
+        if self.settings.log_to_stdout:  # on Cloud Run, stdout goes to Cloud Logging, where the MCP server reads it
+            sys.stdout.write(json.dumps({"severity": "DEBUG", "message": "metrics", "service": self.name,
+                                         "metrics": point}) + "\n")
         return point
 
 
@@ -451,8 +455,8 @@ def create_service_app(
     app.add_middleware(TelemetryMiddleware, ctx=ctx)
     app.include_router(_admin_router(ctx))
 
-    @app.get("/healthz")
-    async def healthz() -> dict[str, str]:
+    @app.get("/health")  # not /healthz: Cloud Run reserves paths ending in "z"
+    async def health() -> dict[str, str]:
         return {"status": "ok", "service": name, "revision": ctx.revision.name}
 
     @app.get("/metrics")

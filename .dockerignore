@@ -1,0 +1,10 @@
+.venv
+.git
+.idea
+.arena
+var
+evals
+tests
+infra
+**/__pycache__
+.env

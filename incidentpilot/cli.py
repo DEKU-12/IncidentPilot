@@ -1,4 +1,4 @@
-"""Command line: ``incidentpilot up | traffic | chaos | logs | mcp | approve | investigate | eval``."""
+"""Command line: ``incidentpilot up | traffic | chaos | logs | mcp | approve | investigate | eval | serve``."""
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ def cmd_up(args: argparse.Namespace) -> int:
         while pending and time.monotonic() < deadline:
             for name in list(pending):
                 try:
-                    if httpx.get(settings.urls[name] + "/healthz", timeout=0.5).status_code == 200:
+                    if httpx.get(settings.urls[name] + "/health", timeout=0.5).status_code == 200:
                         pending.discard(name)
                 except httpx.HTTPError:
                     pass
@@ -238,13 +238,24 @@ def cmd_investigate(args: argparse.Namespace) -> int:
     from langchain_mcp_adapters.client import MultiServerMCPClient
     from langchain_mcp_adapters.tools import load_mcp_tools
 
-    from incidentpilot.agent import investigate_alert, make_model, mcp_server_params
+    from incidentpilot.agent import investigate_alert, make_model, mcp_connection
 
     async def run() -> dict:
-        client = MultiServerMCPClient({"incidentpilot": mcp_server_params()})
+        client = MultiServerMCPClient({"incidentpilot": mcp_connection(args.mcp_url)})
         async with client.session("incidentpilot") as session:
             tools = await load_mcp_tools(session)
-            return await investigate_alert(args.alert, make_model(args.model), tools)
+            return await investigate_alert(
+                args.alert, make_model(args.model), tools, approver=ask_human if args.approve else None
+            )
+
+    def ask_human(p: dict) -> bool:
+        print("\n" + "=" * 70)
+        print(f"IncidentPilot proposes: roll back {p['service']} -> {p['to_revision']}  (confidence {p['confidence']})")
+        print(f"Why: {p['summary']}")
+        print(f"What changed: {p['rollback_evidence']}")
+        print(f"Evidence log IDs: {', '.join(p['evidence_ids'])}")
+        print("=" * 70)
+        return input("Approve this rollback? [y/N]: ").strip().lower() in {"y", "yes"}
 
     print(f"Investigating with {args.model}: {args.alert}\n")
     state = asyncio.run(run())
@@ -255,6 +266,8 @@ def cmd_investigate(args: argparse.Namespace) -> int:
     print(report.model_dump_json(indent=2) if report else "  (no valid report)")
     if state["problems"]:
         print("\nVerification problems:", *state["problems"], sep="\n  - ")
+    if state.get("remediation"):
+        print(f"\nRemediation: {state['remediation']['status']}")
     u = state["usage"]
     print(f"\nTokens: {u['input_tokens']} in / {u['output_tokens']} out, {len(state['tool_calls'])} tool calls")
     return 0
@@ -272,14 +285,16 @@ def cmd_eval(args: argparse.Namespace) -> int:
             print(f"  [{i}/{n}] {case['case_id']}", flush=True)
 
         print(f"Recording {args.n} incidents into {dataset}")
-        asyncio.run(evals.generate_dataset(dataset, args.n, seed=args.seed, on_case=progress))
+        asyncio.run(evals.generate_dataset(dataset, args.n, seed=args.seed, on_case=progress, attacks=args.attacks))
         return 0
 
     def progress(row: dict) -> None:
         mark = "ERR" if row["error"] else ("ok " if row["correct"] else "x  ")
         print(f"  {mark} {row['case_id']:<32} {row['tool_calls']:>2} calls {row['latency_s']:>6}s", flush=True)
 
-    print(f"Evaluating {args.model} on {dataset}")
+    if args.no_guard:
+        os.environ["INCIDENTPILOT_GUARD"] = "off"  # inherited by the MCP server subprocesses
+    print(f"Evaluating {args.model} on {dataset}" + (" (injection guard OFF)" if args.no_guard else ""))
     summary, rows = asyncio.run(evals.run_eval(
         dataset, args.model, concurrency=args.concurrency, limit=args.limit, faults=args.fault,
         judge_model=args.judge, on_result=progress,
@@ -292,6 +307,23 @@ def cmd_eval(args: argparse.Namespace) -> int:
     if args.min_accuracy is not None and summary["accuracy"] < args.min_accuracy:
         print(f"FAIL: accuracy {summary['accuracy']:.0%} is below --min-accuracy {args.min_accuracy:.0%}", file=sys.stderr)
         return 1
+    return 0
+
+
+# -- serve (what the Docker image runs) -------------------------------------------
+
+
+def cmd_serve(args: argparse.Namespace) -> int:
+    import uvicorn
+
+    port = int(os.environ.get("PORT", "8080"))
+    if args.role == "mcp":
+        from incidentpilot.mcp_server import main as serve_mcp
+
+        serve_mcp(http=True, host="0.0.0.0", port=port)
+        return 0
+    target = "incidentpilot.agent_service:create_app" if args.role == "agent" else f"incidentpilot.shopdemo.{args.role}:create_app"
+    uvicorn.run(target, factory=True, host="0.0.0.0", port=port, access_log=False)
     return 0
 
 
@@ -344,6 +376,12 @@ def build_parser() -> argparse.ArgumentParser:
     inv.add_argument("--model", default=os.environ.get("INCIDENTPILOT_MODEL") or "google_vertexai:gemini-3.8-flash",
                      help="'baseline' (offline) or a LangChain provider:model string")
     inv.add_argument("--alert", default="High 5xx error rate on frontend POST /checkout")
+    inv.add_argument("--approve", action="store_true", help="ask before running a proposed rollback")
+    inv.add_argument("--mcp-url", help="use a deployed MCP server (Cloud Run URL) instead of a local one")
+
+    serve = sub.add_parser("serve", help="run one role on $PORT (used by the Docker image)")
+    serve.add_argument("role", choices=[*SERVICES, "mcp", "agent"])
+    serve.set_defaults(func=cmd_serve)
     inv.set_defaults(func=cmd_investigate)
 
     ev = sub.add_parser("eval", help="record incidents and score the agent on them")
@@ -352,6 +390,7 @@ def build_parser() -> argparse.ArgumentParser:
     gen.add_argument("-n", type=int, default=150)
     gen.add_argument("--seed", type=int, default=0)
     gen.add_argument("--dataset", help="output folder (default var/evals/dataset)")
+    gen.add_argument("--attacks", action="store_true", help="add attacker text to the logs (prompt-injection cases)")
     run = ev_sub.add_parser("run", help="replay the dataset to the agent and score it")
     run.add_argument("--model", default="baseline")
     run.add_argument("--limit", type=int, help="only the first N cases")
@@ -360,6 +399,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--min-accuracy", type=float, help="exit 1 below this accuracy (CI gate)")
     run.add_argument("--dataset", help="dataset folder (default var/evals/dataset)")
     run.add_argument("--fault", action="append", choices=[k.value for k in FaultKind], help="only these faults")
+    run.add_argument("--no-guard", action="store_true", help="turn the prompt-injection guard off")
     run.add_argument("--label", help="save as a named experiment in evals/EXPERIMENTS.md instead of RESULTS.md")
     ev.set_defaults(func=cmd_eval)
     return parser
